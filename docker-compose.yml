@@ -9,9 +9,9 @@ services:
     volumes:
       - 'moodledb_apache:/var/lib/postgresql/data'
     environment:
-      POSTGRES_DB: 'moodle'
-      POSTGRES_USER: 'moodle'
-      POSTGRES_PASSWORD: 'password'
+      POSTGRES_DB: *DATABASE_NAME*
+      POSTGRES_USER: *USERNAME*
+      POSTGRES_PASSWORD: *PASSWORD*
 
   moodle:
     image: ellakcy/moodle:postgresql_apache_latest
@@ -25,11 +25,11 @@ services:
     environment:
       MOODLE_URL: 'http://localhost:8082'
       MOODLE_ADMIN: 'admin'
-      MOODLE_ADMIN_PASSWORD: 'password'
+      MOODLE_ADMIN_PASSWORD: *PASSWORD*
       MOODLE_ADMIN_EMAIL: 'test@test.com'
       MOODLE_DB_HOST: "moodle_db"
-      MOODLE_DB_USER: 'moodle'
-      MOODLE_DB_PASSWORD: 'password'
+      MOODLE_DB_USER: *USERNAME*
+      MOODLE_DB_PASSWORD: *PASSWORD*
       MOODLE_DB_NAME: 'moodle'
       MOODLE_REVERSE_LB: 'false'
       MOODLE_SSL: 'false'
