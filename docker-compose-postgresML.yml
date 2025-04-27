@@ -9,9 +9,9 @@ services:
       - "5433:5433"
       - "8000:8000"
     environment:
-      POSTGRES_DB: 'moodle'
-      POSTGRES_USER: 'moodle'
-      POSTGRES_PASSWORD: 'password'
+      POSTGRES_DB: **DATABASE_NAME
+      POSTGRES_USER: *USERNAME*
+      POSTGRES_PASSWORD: *PASSWORD*
     volumes:
       - postgresml_data:/var/lib/postgresql
     command: sudo -u postgresml psql -d postgresml
