@@ -1,6 +1,6 @@
-DROP TABLE IF EXISTS postgres.pgml.student_activity;
+DROP TABLE IF EXISTS pgml.student_activity;
 
-CREATE TABLE postgres.pgml.student_activity (
+CREATE TABLE pgml.student_activity(
     idstudent BIGINT DEFAULT 0,
     assign_clicks INT DEFAULT 0,
     quiz_clicks INT DEFAULT 0,
@@ -22,18 +22,18 @@ CREATE TABLE postgres.pgml.student_activity (
     final_grade_binary BOOLEAN DEFAULT FALSE
 );
 
-COPY postgres.pgml.student_activity
+COPY pgml.student_activity
 FROM '/tmp/student_activity.csv'
 DELIMITER ','
 CSV HEADER;
 
 
-SELECT * FROM postgres.pgml.student_activity;
+SELECT * FROM pgml.student_activity;
 
 
 --- view in care datele sunt normalizate si nu exista student care sa aiba nota finala 0
-DROP VIEW IF EXISTS postgres.pgml.student_activity_normalized;
-CREATE VIEW postgres.pgml.student_activity_normalized AS
+DROP VIEW IF EXISTS pgml.student_activity_normalized;
+CREATE VIEW pgml.student_activity_normalized AS
 SELECT
     (assign_clicks - avg_assign) / NULLIF(stddev_assign, 0) AS assign_clicks_norm,
     (quiz_clicks - avg_quiz) / NULLIF(stddev_quiz, 0) AS quiz_clicks_norm,
@@ -65,6 +65,7 @@ SELECT * FROM postgres.pgml.student_activity_normalized;
 
 SHOW search_path;
 SET search_path TO pgml;
+CREATE EXTENSION pgml;
 
 /*
 ---antrenare alg
@@ -75,22 +76,31 @@ SELECT * FROM pgml.train(
     y_column_name => 'final_grade_binary'::text,
     algorithm => 'random_forest'::algorithm
 );
+*/
 
--- (dacă extensia suportă 'mlp' - Multi-layer Perceptron)
 SELECT * FROM pgml.train(
-    project_name => 'STUDENT_FINAL_GRADE_PREDICTION_PERCEPTRON_L2'::text,
+    project_name => 'STUDENT_FINAL_GRADE_PREDICTION_LINEAR_REGRESSION_NORMALIZED'::text,
     task => 'classification'::text,
     relation_name => 'pgml.student_activity_normalized'::text,
     y_column_name => 'final_grade_binary'::text,
-    algorithm => 'linear'::algorithm,
-    hyperparams => '{
-        "penalty": "l2",
-        "fit_intercept": true,
-        "max_iter": 1000
-    }'::jsonb
+    algorithm => 'linear'::algorithm
 );
-*/
 
+SELECT * FROM pgml.train(
+    project_name => 'STUDENT_FINAL_GRADE_PREDICTION_RANDOM_FOREST_NORMALIZED'::text,
+    task => 'classification'::text,
+    relation_name => 'pgml.student_activity_normalized'::text,
+    y_column_name => 'final_grade_binary'::text,
+    algorithm => 'random_forest'::algorithm
+);
+
+SELECT * FROM pgml.train(
+    project_name => 'STUDENT_FINAL_GRADE_PREDICTION_SVM_NORMALIZED'::text,
+    task => 'classification'::text,
+    relation_name => 'pgml.student_activity_normalized'::text,
+    y_column_name => 'final_grade_binary'::text,
+    algorithm => 'svm'::algorithm
+);
 
 SELECT * FROM pgml.train(
     project_name => 'student_grade_perceptron',
@@ -121,7 +131,7 @@ FROM pgml.student_activity_no_nulls;
 
 ---predictie alg
 SELECT final_grade_binary,
-       pgml.predict('student_grade_perceptron',
+       pgml.predict('STUDENT_FINAL_GRADE_PREDICTION_SVM_NORMALIZED',
            ARRAY[
                assign_clicks_norm::DOUBLE PRECISION,
                quiz_clicks_norm::DOUBLE PRECISION,
@@ -130,7 +140,7 @@ SELECT final_grade_binary,
                url_clicks_norm::DOUBLE PRECISION
            ]::DOUBLE PRECISION[]
        ) AS predicted_score,
-       CAST(final_grade_binary AS INTEGER) - pgml.predict('student_grade_perceptron',
+       CAST(final_grade_binary AS INTEGER) - pgml.predict('STUDENT_FINAL_GRADE_PREDICTION_SVM_NORMALIZED',
            ARRAY[
                assign_clicks_norm::DOUBLE PRECISION,
                quiz_clicks_norm::DOUBLE PRECISION,
@@ -153,4 +163,4 @@ SELECT id, algorithm,
            (metrics->>'precision')::numeric + (metrics->>'recall')::numeric, 0
        ) AS f1_score
 FROM pgml.models
-WHERE id = 18;
+WHERE id = 3;
